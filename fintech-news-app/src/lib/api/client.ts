@@ -1,6 +1,7 @@
 import type { Article, Category, TechLevel } from '../../types';
 import { generateClient } from 'aws-amplify/api';
-// @ts-expect-error - GraphQL auto-generated queries
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - GraphQL auto-generated queries
 import { listArticles, getArticle as getArticleQuery, listCategories } from '../../graphql/queries';
 // @ts-expect-error - AWS Amplify auto-generated file
 import awsconfig from '../../aws-exports.js';
