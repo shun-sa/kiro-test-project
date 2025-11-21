@@ -157,6 +157,92 @@ amplify push
 
 確認プロンプトで `Yes` を選択してデプロイを実行します。
 
+### 2.4 AppSync GraphQL Endpointの確認
+
+デプロイ完了後、以下の方法でGraphQL Endpointを確認できます：
+
+#### 方法1: Amplify CLIで確認
+
+```bash
+amplify status
+```
+
+出力例：
+```
+Current Environment: dev
+
+| Category | Resource name      | Operation | Provider plugin   |
+| -------- | ------------------ | --------- | ----------------- |
+| Api      | fintechnewsapp     | No Change | awscloudformation |
+
+GraphQL endpoint: https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql
+GraphQL API KEY: da2-xxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+#### 方法2: AWS AppSync Consoleで確認
+
+1. **AWS AppSync Consoleにアクセス**
+   - https://console.aws.amazon.com/appsync/
+
+2. **APIを選択**
+   - 作成したAPI（例: fintechnewsapp）をクリック
+
+3. **Settingsタブを開く**
+   - 「API URL」がGraphQL Endpointです
+   - 例: `https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql`
+
+4. **API Keyを確認**
+   - 「API Keys」タブで確認
+   - 例: `da2-xxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+#### 方法3: aws-exports.jsから確認
+
+Amplify CLIが自動生成する設定ファイルから確認：
+
+```bash
+cat src/aws-exports.js
+```
+
+出力例：
+```javascript
+const awsmobile = {
+    "aws_appsync_graphqlEndpoint": "https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql",
+    "aws_appsync_region": "ap-northeast-1",
+    "aws_appsync_authenticationType": "API_KEY",
+    "aws_appsync_apiKey": "da2-xxxxxxxxxxxxxxxxxxxxxxxxxx"
+};
+```
+
+#### 方法4: AWS CLIで確認
+
+```bash
+# AppSync APIのリストを取得
+aws appsync list-graphql-apis --region ap-northeast-1
+
+# 特定のAPIの詳細を取得
+aws appsync get-graphql-api --api-id YOUR_API_ID --region ap-northeast-1
+```
+
+### 2.5 Endpointの設定
+
+確認したEndpointをAmplifyの環境変数に設定：
+
+1. **Amplify Consoleにアクセス**
+   - https://console.aws.amazon.com/amplify/
+
+2. **アプリを選択**
+
+3. **Environment variables**タブ
+
+4. **変数を追加**
+   ```
+   VITE_USE_MOCK_API = false
+   VITE_API_BASE_URL = https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql
+   ```
+
+5. **再デプロイ**
+   - 「Redeploy this version」をクリック
+
 ## Phase 3: Lambda関数の実装
 
 ### 3.1 ニュース取得Lambda関数

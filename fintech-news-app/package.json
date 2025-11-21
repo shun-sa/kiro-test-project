@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.13.1",
+    "aws-amplify": "^6.15.8",
     "framer-motion": "^12.23.24",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -17,6 +19,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.936.0",
+    "@aws-sdk/lib-dynamodb": "^3.936.0",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",

@@ -136,6 +136,49 @@ aws cloudfront create-distribution \
   --default-root-object index.html
 ```
 
+## 環境変数の設定
+
+### Amplify Consoleでの設定
+
+1. **Amplify Consoleにアクセス**
+   - https://console.aws.amazon.com/amplify/
+
+2. **アプリを選択**
+
+3. **Environment variables**タブをクリック
+
+4. **変数を追加**
+
+#### モックAPI使用（デフォルト）
+```
+# 環境変数なし、または以下を設定
+VITE_USE_MOCK_API = true
+```
+
+#### 本番API使用（AWS統合後）
+```
+VITE_USE_MOCK_API = false
+VITE_API_BASE_URL = https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql
+```
+
+**注意**: 環境変数を変更した後は、アプリを再デプロイする必要があります。
+
+### AppSync Endpointの確認方法
+
+#### Amplify CLIで確認
+```bash
+amplify status
+```
+
+#### AWS Consoleで確認
+1. https://console.aws.amazon.com/appsync/
+2. APIを選択 → Settings → API URL
+
+#### AWS CLIで確認
+```bash
+aws appsync list-graphql-apis --region ap-northeast-1 --query 'graphqlApis[0].uris.GRAPHQL' --output text
+```
+
 ## 環境別デプロイ
 
 ### 開発環境（dev）
@@ -243,6 +286,47 @@ cat .env.production
 
 # 環境変数を明示的に設定してビルド
 VITE_USE_MOCK_API=false npm run build
+```
+
+### 問題: AppSync Endpointが分からない
+
+**原因**: GraphQL Endpointの確認方法が不明
+
+**解決策**:
+
+#### 方法1: Amplify CLIで確認
+```bash
+amplify status
+```
+
+#### 方法2: AWS AppSync Consoleで確認
+1. https://console.aws.amazon.com/appsync/ にアクセス
+2. APIを選択
+3. 「Settings」タブで「API URL」を確認
+
+#### 方法3: aws-exports.jsから確認
+```bash
+cat src/aws-exports.js | grep graphqlEndpoint
+```
+
+#### 方法4: AWS CLIで確認
+```bash
+aws appsync list-graphql-apis --region ap-northeast-1
+```
+
+出力例：
+```json
+{
+  "graphqlApis": [
+    {
+      "name": "fintechnewsapp",
+      "apiId": "xxxxxxxxxxxxxxxxxxxxx",
+      "uris": {
+        "GRAPHQL": "https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql"
+      }
+    }
+  ]
+}
 ```
 
 ### 問題: APIリクエストが失敗する
