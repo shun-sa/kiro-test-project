@@ -10,11 +10,22 @@ function awsExportsFallback(): Plugin {
   const virtualModuleId = 'virtual:aws-exports'
   const resolvedVirtualModuleId = '\0' + virtualModuleId
 
+  const defaultAwsConfig = `
+    const awsmobile = {
+      aws_project_region: 'ap-northeast-1',
+      aws_appsync_graphqlEndpoint: '',
+      aws_appsync_region: 'ap-northeast-1',
+      aws_appsync_authenticationType: 'API_KEY',
+      aws_appsync_apiKey: '',
+    };
+    export default awsmobile;
+  `
+
   return {
     name: 'aws-exports-fallback',
     resolveId(id) {
-      // aws-exports.jsへのインポートを仮想モジュールにリダイレクト
-      if (id === './aws-exports.js' || id === './aws-exports') {
+      // aws-exports.jsへのインポートを処理
+      if (id.includes('aws-exports')) {
         // ファイルが存在する場合は実際のファイルを使用
         if (fs.existsSync(awsExportsPath)) {
           return awsExportsPath
@@ -26,16 +37,11 @@ function awsExportsFallback(): Plugin {
     load(id) {
       if (id === resolvedVirtualModuleId) {
         // デフォルトの空の設定を返す
-        return `
-          const awsmobile = {
-            aws_project_region: 'ap-northeast-1',
-            aws_appsync_graphqlEndpoint: '',
-            aws_appsync_region: 'ap-northeast-1',
-            aws_appsync_authenticationType: 'API_KEY',
-            aws_appsync_apiKey: '',
-          };
-          export default awsmobile;
-        `
+        return defaultAwsConfig
+      }
+      // 実際のファイルが存在しない場合もフォールバック
+      if (id === awsExportsPath && !fs.existsSync(awsExportsPath)) {
+        return defaultAwsConfig
       }
     },
   }
