@@ -6,11 +6,17 @@ import './index.css';
 // Amplify設定（Backend環境が接続されている場合のみ）
 async function configureAmplify() {
   try {
-    // @ts-expect-error - AWS Amplify auto-generated file (Backend環境接続時のみ存在)
+    // @ts-expect-error - AWS Amplify auto-generated file
     const { default: awsconfig } = await import('./aws-exports');
-    const { Amplify } = await import('aws-amplify');
-    Amplify.configure(awsconfig);
-    console.log('✅ Amplify Backend connected');
+    
+    // Endpointが設定されている場合のみAmplifyを設定
+    if (awsconfig.aws_appsync_graphqlEndpoint) {
+      const { Amplify } = await import('aws-amplify');
+      Amplify.configure(awsconfig);
+      console.log('✅ Amplify Backend connected');
+    } else {
+      console.log('ℹ️ Amplify Backend not configured, using mock API');
+    }
   } catch {
     console.log('ℹ️ Amplify Backend not connected, using mock API');
   }
