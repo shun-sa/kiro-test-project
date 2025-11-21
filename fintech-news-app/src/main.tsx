@@ -1,27 +1,40 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Amplify } from 'aws-amplify';
 import App from './App.tsx';
 import './index.css';
-// @ts-expect-error - AWS Amplify auto-generated file
-import awsconfig from './aws-exports';
 
-// Amplify設定
-Amplify.configure(awsconfig);
+// Amplify設定（Backend環境が接続されている場合のみ）
+async function configureAmplify() {
+  try {
+    // @ts-expect-error - AWS Amplify auto-generated file (Backend環境接続時のみ存在)
+    const { default: awsconfig } = await import('./aws-exports');
+    const { Amplify } = await import('aws-amplify');
+    Amplify.configure(awsconfig);
+    console.log('✅ Amplify Backend connected');
+  } catch {
+    console.log('ℹ️ Amplify Backend not connected, using mock API');
+  }
+}
 
-// モックAPIの初期化（開発環境のみ）
+// モックAPIの初期化
+// 環境変数が明示的に'false'の場合のみモックを無効化
 async function enableMocking() {
-  if (import.meta.env.VITE_USE_MOCK_API !== 'true') {
+  const useMockApi = import.meta.env.VITE_USE_MOCK_API;
+
+  // 環境変数が明示的に'false'の場合のみモックを無効化
+  if (useMockApi === 'false') {
     return;
   }
 
+  // それ以外（未設定または'true'）の場合はモックAPIを有効化
   const { worker } = await import('./mocks/browser');
   return worker.start({
     onUnhandledRequest: 'bypass',
   });
 }
 
-enableMocking().then(() => {
+// 初期化
+Promise.all([configureAmplify(), enableMocking()]).then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />
