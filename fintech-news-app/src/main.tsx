@@ -2,23 +2,22 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+// @ts-expect-error - AWS Amplify auto-generated file
+import awsconfig from './aws-exports.js';
 
 // Amplify設定（Backend環境が接続されている場合のみ）
 async function configureAmplify() {
   try {
-    // @ts-expect-error - AWS Amplify auto-generated file
-    const { default: awsconfig } = await import('./aws-exports');
-    
     // Endpointが設定されている場合のみAmplifyを設定
-    if (awsconfig.aws_appsync_graphqlEndpoint) {
+    if (awsconfig?.aws_appsync_graphqlEndpoint) {
       const { Amplify } = await import('aws-amplify');
       Amplify.configure(awsconfig);
       console.log('✅ Amplify Backend connected');
     } else {
       console.log('ℹ️ Amplify Backend not configured, using mock API');
     }
-  } catch {
-    console.log('ℹ️ Amplify Backend not connected, using mock API');
+  } catch (error) {
+    console.log('ℹ️ Amplify Backend not connected, using mock API', error);
   }
 }
 
