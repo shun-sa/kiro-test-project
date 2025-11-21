@@ -153,7 +153,39 @@ git push origin main
 
 ## トラブルシューティング
 
-### 問題1: 環境変数が反映されない
+### 問題1: 404エラー - Failed to load resource
+
+**症状**: 
+```
+Failed to load resource: the server responded with a status of 404 ()
+Failed to fetch articles: ApiError: HTTP Error: 404
+```
+
+**原因**: 
+- モックAPIが起動しようとしているが、本番環境では不要
+- または、Backend環境が接続されていない
+
+**解決策**:
+
+#### オプション1: Backend環境を接続（推奨）
+1. Amplify Consoleで「Backend environments」タブを開く
+2. 「Connect backend」をクリック
+3. Backend環境（dev）を選択
+4. 再デプロイ
+
+これにより、`aws-exports.js`が自動生成され、モックAPIが自動的に無効化されます。
+
+#### オプション2: 環境変数でモックAPIを無効化
+Backend環境を接続しない場合（モックAPIのみで動作させる場合）:
+1. 「Environment variables」タブを開く
+2. 変数を追加:
+   - Name: `VITE_USE_MOCK_API`
+   - Value: `true`（モックAPIを明示的に有効化）
+3. 再デプロイ
+
+**注意**: 本番環境では、Backend環境の接続（オプション1）を推奨します。
+
+### 問題2: 環境変数が反映されない
 
 **症状**: デプロイ後もモックAPIが使用されている
 

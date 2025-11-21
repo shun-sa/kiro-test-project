@@ -28,14 +28,27 @@ async function enableMocking() {
 
   // 環境変数が明示的に'false'の場合のみモックを無効化
   if (useMockApi === 'false') {
+    console.log('ℹ️ Mock API disabled by environment variable');
     return;
   }
 
-  // それ以外（未設定または'true'）の場合はモックAPIを有効化
-  const { worker } = await import('./mocks/browser');
-  return worker.start({
-    onUnhandledRequest: 'bypass',
-  });
+  // 本番環境（production）では、Amplify Backendが設定されている場合はモックを無効化
+  if (import.meta.env.PROD && awsconfig?.aws_appsync_graphqlEndpoint) {
+    console.log('ℹ️ Production mode with Amplify Backend, skipping mock API');
+    return;
+  }
+
+  // それ以外（開発環境または未設定）の場合はモックAPIを有効化
+  try {
+    const { worker } = await import('./mocks/browser');
+    await worker.start({
+      onUnhandledRequest: 'bypass',
+    });
+    console.log('✅ Mock API enabled');
+  } catch (error) {
+    console.warn('⚠️ Failed to start Mock Service Worker:', error);
+    console.log('ℹ️ Continuing without mock API');
+  }
 }
 
 // 初期化
