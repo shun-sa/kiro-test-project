@@ -256,7 +256,27 @@ aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 
 ## トラブルシューティング
 
-### 問題: ビルドが失敗する
+### 問題: ビルドが失敗する（aws-exports.js not found）
+
+**原因**: AWS Amplify Backend未接続時に`aws-exports.js`ファイルが存在しない
+
+**解決策**: 
+このプロジェクトには自動フォールバック機能が実装されています。`vite.config.ts`のカスタムプラグインが、`aws-exports.js`が存在しない場合に自動的にデフォルト設定を提供します。
+
+ビルドエラーが発生する場合：
+```bash
+# 依存関係を再インストール
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+**技術詳細**:
+- `vite.config.ts`の`awsExportsFallback()`プラグインが、ファイルの存在をチェック
+- 存在しない場合、仮想モジュールとして空の設定を提供
+- これにより、Amplify Backend未接続でもビルドが成功
+
+### 問題: ビルドが失敗する（依存関係のエラー）
 
 **原因**: 依存関係のエラー
 
