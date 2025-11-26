@@ -11,7 +11,14 @@ import type { Schema } from '../../../amplify/data/resource';
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 // Amplify Data クライアントの初期化（本番環境用）
-const client = generateClient<Schema>();
+let client: ReturnType<typeof generateClient<Schema>> | null = null;
+
+try {
+  client = generateClient<Schema>();
+  console.log('✅ Amplify Data client initialized');
+} catch (error) {
+  console.warn('⚠️ Amplify Data client initialization failed, using mock API:', error);
+}
 
 export class ApiError extends Error {
   status: number;
@@ -113,6 +120,18 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合
+    if (!client) {
+      console.warn('Amplify Data client not available, falling back to mock API');
+      const searchParams = new URLSearchParams();
+      if (params?.category) searchParams.set('category', params.category);
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+      const url = `/api/articles${searchParams.toString() ? `?${searchParams}` : ''}`;
+      const response = await fetch(url);
+      return handleResponse(response);
+    }
+
     try {
       const filter = params?.category
         ? { category: { eq: params.category } }
@@ -150,6 +169,13 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合
+    if (!client) {
+      console.warn('Amplify Data client not available, falling back to mock API');
+      const url = `/api/articles/${id}`;
+      const response = await fetch(url);
+      return handleResponse(response);
+    }
+
     try {
       const { data: item } = await client.models.Article.get({ id });
 
@@ -176,6 +202,13 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合
+    if (!client) {
+      console.warn('Amplify Data client not available, falling back to mock API');
+      const url = '/api/categories';
+      const response = await fetch(url);
+      return handleResponse(response);
+    }
+
     try {
       const { data: items } = await client.models.Category.list();
       return items.map(transformCategory);
@@ -201,6 +234,17 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合（タイトルまたはサマリーで検索）
+    if (!client) {
+      console.warn('Amplify Data client not available, falling back to mock API');
+      const searchParams = new URLSearchParams({
+        q: query,
+        limit: limit.toString(),
+      });
+      const url = `/api/articles/search?${searchParams}`;
+      const response = await fetch(url);
+      return handleResponse(response);
+    }
+
     try {
       const { data: items } = await client.models.Article.list({
         filter: {
