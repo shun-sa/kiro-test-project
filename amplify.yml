@@ -4,8 +4,11 @@ backend:
     build:
       commands:
         - cd fintech-news-app
-        - npm install --include=optional --legacy-peer-deps
-        - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --outputs-out-dir ../amplify_outputs.json || npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        - npm install --legacy-peer-deps
+        - npm install -g @aws-amplify/backend-cli
+        - export CHOKIDAR_USEPOLLING=1
+        - export PARCEL_WATCHER_BACKEND=none
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
     preBuild:
