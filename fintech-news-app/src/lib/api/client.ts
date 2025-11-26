@@ -16,6 +16,10 @@ let client: ReturnType<typeof generateClient<Schema>> | null = null;
 try {
   client = generateClient<Schema>();
   console.log('✅ Amplify Data client initialized');
+  console.log('Client models:', client?.models ? 'Available' : 'Not available');
+  if (client?.models) {
+    console.log('Available models:', Object.keys(client.models));
+  }
 } catch (error) {
   console.warn('⚠️ Amplify Data client initialization failed, using mock API:', error);
 }
@@ -120,8 +124,8 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合
-    if (!client) {
-      console.warn('Amplify Data client not available, falling back to mock API');
+    if (!client || !client.models) {
+      console.warn('Amplify Data client or models not available, falling back to mock API');
       const searchParams = new URLSearchParams();
       if (params?.category) searchParams.set('category', params.category);
       if (params?.page) searchParams.set('page', params.page.toString());
@@ -169,8 +173,8 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合
-    if (!client) {
-      console.warn('Amplify Data client not available, falling back to mock API');
+    if (!client || !client.models) {
+      console.warn('Amplify Data client or models not available, falling back to mock API');
       const url = `/api/articles/${id}`;
       const response = await fetch(url);
       return handleResponse(response);
@@ -202,8 +206,8 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合
-    if (!client) {
-      console.warn('Amplify Data client not available, falling back to mock API');
+    if (!client || !client.models) {
+      console.warn('Amplify Data client or models not available, falling back to mock API');
       const url = '/api/categories';
       const response = await fetch(url);
       return handleResponse(response);
@@ -234,8 +238,8 @@ export const apiClient = {
     }
 
     // Amplify Data APIを使用する場合（タイトルまたはサマリーで検索）
-    if (!client) {
-      console.warn('Amplify Data client not available, falling back to mock API');
+    if (!client || !client.models) {
+      console.warn('Amplify Data client or models not available, falling back to mock API');
       const searchParams = new URLSearchParams({
         q: query,
         limit: limit.toString(),
