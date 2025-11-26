@@ -1,455 +1,361 @@
 # デプロイメントガイド
 
-このドキュメントでは、FinTech News Appのデプロイ手順を説明します。
+このドキュメントでは、FinTech News Appを本番環境にデプロイする手順を説明します。
 
 ## デプロイ方法の選択
 
-### オプション1: AWS Amplify（推奨）
-- フルマネージドCI/CD
-- 自動スケーリング
-- カスタムドメイン対応
-- 簡単なロールバック
+### 1. AWS Amplify Hosting（推奨）
 
-### オプション2: 手動デプロイ
-- 静的ホスティング（S3 + CloudFront）
-- より細かい制御が可能
+AWS Amplify Hostingを使用すると、GitリポジトリからCI/CDパイプラインを自動構築できます。
 
-## オプション1: AWS Amplifyでのデプロイ
+### 2. 手動デプロイ
+
+ビルドしたファイルを任意のホスティングサービスにデプロイします。
+
+## AWS Amplify Hostingへのデプロイ
 
 ### 前提条件
-- AWSアカウント
-- GitHubリポジトリ（またはGitLab、Bitbucket）
-- AWS Amplify CLI インストール済み
 
-### ステップ1: Amplifyアプリの作成
+- GitHubまたはGitLabリポジトリ
+- AWS アカウント
+- AWS CLI がインストールされ、設定されていること
 
-#### 方法A: Amplify Console（推奨）
+### ステップ1: Gitリポジトリの準備
 
-1. **AWS Amplify Consoleにアクセス**
-   - https://console.aws.amazon.com/amplify/
-
-2. **新しいアプリを作成**
-   - 「Host web app」をクリック
-   - GitHubを選択して認証
-   - リポジトリとブランチを選択
-
-3. **ビルド設定**
-   ```yaml
-   version: 1
-   frontend:
-     phases:
-       preBuild:
-         commands:
-           - cd fintech-news-app
-           - npm ci
-       build:
-         commands:
-           - npm run build
-     artifacts:
-       baseDirectory: fintech-news-app/dist
-       files:
-         - '**/*'
-     cache:
-       paths:
-         - fintech-news-app/node_modules/**/*
-   ```
-
-4. **環境変数の設定**
-   - `VITE_USE_MOCK_API`: `false`
-   - `VITE_API_BASE_URL`: （AppSync GraphQL Endpoint）
-
-5. **デプロイ**
-   - 「Save and deploy」をクリック
-
-#### 方法B: Amplify CLI
+プロジェクトをGitリポジトリにプッシュ：
 
 ```bash
-cd fintech-news-app
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin <your-repository-url>
+git push -u origin main
+```
+
+### ステップ2: Amplify Hostingアプリの作成
+
+#### AWS Consoleから
+
+1. [AWS Amplify Console](https://console.aws.amazon.com/amplify/)を開く
+2. 「新しいアプリ」→「ホストWebアプリ」をクリック
+3. Gitプロバイダー（GitHub/GitLab）を選択
+4. リポジトリとブランチを選択
+5. ビルド設定を確認（自動検出されます）
+
+#### AWS CLIから
+
+```bash
+# Amplify CLIをインストール
+npm install -g @aws-amplify/cli
+
+# Amplifyアプリを作成
 amplify init
+
+# ホスティングを追加
 amplify add hosting
+
+# デプロイ
 amplify publish
 ```
 
-### ステップ2: カスタムドメインの設定
+### ステップ3: ビルド設定
 
-1. **Amplify Consoleでドメイン管理**
-   - 「Domain management」タブ
-   - 「Add domain」をクリック
+`amplify.yml`が自動生成されますが、以下の設定を確認：
 
-2. **ドメインの検証**
-   - DNSレコードを追加
-   - SSL証明書の自動発行を待つ
+```yaml
+version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - npm ci
+        - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+```
 
-3. **サブドメインの設定**
-   - `www.yourdomain.com`
-   - `app.yourdomain.com`
+### ステップ4: 環境変数の設定
 
-### ステップ3: CI/CDの設定
+AWS Amplify Consoleで環境変数を設定：
 
-Amplifyは自動的にCI/CDを設定します：
+1. アプリの設定 → 環境変数
+2. 以下を追加：
 
-- **自動ビルド**: GitHubへのpush時
-- **プレビュー環境**: Pull Request作成時
-- **ロールバック**: 以前のデプロイに戻す
+```
+VITE_USE_MOCK_API=false
+```
 
-## オプション2: 手動デプロイ（S3 + CloudFront）
+### ステップ5: デプロイの確認
+
+1. ビルドが完了するまで待つ（5-10分）
+2. 提供されたURLでアプリにアクセス
+3. 動作確認
+
+## 手動デプロイ
 
 ### ステップ1: ビルド
 
 ```bash
-cd fintech-news-app
 npm run build
 ```
 
-### ステップ2: S3バケットの作成
+### ステップ2: Amplify Backendのデプロイ
 
 ```bash
-aws s3 mb s3://fintech-news-app-prod
+npm run amplify:deploy
 ```
 
-### ステップ3: 静的ウェブサイトホスティングの有効化
+`amplify_outputs.json`が生成されます。
+
+### ステップ3: 再ビルド
+
+Amplify設定を含めて再ビルド：
 
 ```bash
-aws s3 website s3://fintech-news-app-prod \
-  --index-document index.html \
-  --error-document index.html
+npm run build
 ```
 
-### ステップ4: ファイルのアップロード
+### ステップ4: 静的ファイルのアップロード
+
+`dist/`ディレクトリの内容を以下のいずれかにアップロード：
+
+#### Netlify
 
 ```bash
-aws s3 sync dist/ s3://fintech-news-app-prod \
-  --delete \
-  --cache-control "public, max-age=31536000, immutable" \
-  --exclude "index.html" \
-  --exclude "*.json"
-
-aws s3 cp dist/index.html s3://fintech-news-app-prod/index.html \
-  --cache-control "public, max-age=0, must-revalidate"
+npm install -g netlify-cli
+netlify deploy --prod --dir=dist
 ```
 
-### ステップ5: CloudFrontディストリビューションの作成
+#### Vercel
 
 ```bash
-aws cloudfront create-distribution \
-  --origin-domain-name fintech-news-app-prod.s3.amazonaws.com \
-  --default-root-object index.html
+npm install -g vercel
+vercel --prod
 ```
 
-## 環境変数の設定
-
-### Amplify Consoleでの設定
-
-1. **Amplify Consoleにアクセス**
-   - https://console.aws.amazon.com/amplify/
-
-2. **アプリを選択**
-
-3. **Environment variables**タブをクリック
-
-4. **変数を追加**
-
-#### モックAPI使用（デフォルト）
-```
-# 環境変数なし、または以下を設定
-VITE_USE_MOCK_API = true
-```
-
-#### 本番API使用（AWS統合後）
-```
-VITE_USE_MOCK_API = false
-VITE_API_BASE_URL = https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql
-```
-
-**注意**: 環境変数を変更した後は、アプリを再デプロイする必要があります。
-
-### AppSync Endpointの確認方法
-
-#### Amplify CLIで確認
-```bash
-amplify status
-```
-
-#### AWS Consoleで確認
-1. https://console.aws.amazon.com/appsync/
-2. APIを選択 → Settings → API URL
-
-#### AWS CLIで確認
-```bash
-aws appsync list-graphql-apis --region ap-northeast-1 --query 'graphqlApis[0].uris.GRAPHQL' --output text
-```
-
-## 環境別デプロイ
-
-### 開発環境（dev）
+#### AWS S3 + CloudFront
 
 ```bash
-# モックAPIを使用
-VITE_USE_MOCK_API=true npm run build
-amplify publish --environment dev
+# S3バケットを作成
+aws s3 mb s3://fintech-news-app
+
+# 静的ウェブサイトホスティングを有効化
+aws s3 website s3://fintech-news-app --index-document index.html
+
+# ファイルをアップロード
+aws s3 sync dist/ s3://fintech-news-app --delete
+
+# CloudFrontディストリビューションを作成（オプション）
 ```
 
-### ステージング環境（staging）
+## カスタムドメインの設定
 
-```bash
-# 本番APIを使用（テストデータ）
-VITE_USE_MOCK_API=false npm run build
-amplify publish --environment staging
+### AWS Amplify Hosting
+
+1. Amplify Console → ドメイン管理
+2. 「カスタムドメインを追加」
+3. ドメインを入力（例: news.example.com）
+4. DNS設定を更新（CNAMEレコード）
+5. SSL証明書が自動発行されるまで待つ
+
+### Netlify
+
+1. Site settings → Domain management
+2. Add custom domain
+3. DNS設定を更新
+
+### Vercel
+
+1. Project settings → Domains
+2. Add domain
+3. DNS設定を更新
+
+## 環境別設定
+
+### 開発環境
+
+```env
+VITE_USE_MOCK_API=true
 ```
 
-### 本番環境（prod）
+### ステージング環境
 
-```bash
-# 本番APIを使用
-VITE_USE_MOCK_API=false npm run build
-amplify publish --environment prod
+```env
+VITE_USE_MOCK_API=false
 ```
 
-## デプロイ後の確認
+### 本番環境
 
-### 1. 動作確認チェックリスト
-
-- [ ] トップページが表示される
-- [ ] 記事一覧が取得できる
-- [ ] カテゴリフィルターが動作する
-- [ ] 検索機能が動作する
-- [ ] 記事詳細ページが表示される
-- [ ] ブックマーク機能が動作する
-- [ ] 通知設定が保存される
-- [ ] ダーク/ライトモード切り替えが動作する
-
-### 2. パフォーマンス確認
-
-```bash
-# Lighthouse スコアを確認
-npm install -g lighthouse
-lighthouse https://your-domain.com --view
+```env
+VITE_USE_MOCK_API=false
 ```
 
-目標スコア：
-- Performance: 90+
-- Accessibility: 95+
-- Best Practices: 95+
-- SEO: 90+
+## CI/CDパイプライン
 
-### 3. エラー監視
+### GitHub Actions
 
-- CloudWatch Logsでエラーを確認
-- Amplify Consoleでビルドログを確認
-- ブラウザのコンソールでエラーを確認
+`.github/workflows/deploy.yml`を作成：
 
-## ロールバック手順
+```yaml
+name: Deploy to AWS Amplify
 
-### Amplify Console
+on:
+  push:
+    branches:
+      - main
 
-1. 「Deployments」タブを開く
-2. 以前のデプロイを選択
-3. 「Redeploy this version」をクリック
-
-### 手動デプロイ
-
-```bash
-# 以前のビルドを再デプロイ
-aws s3 sync backup/dist-v1.0.0/ s3://fintech-news-app-prod --delete
-aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build
+        run: npm run build
+        
+      - name: Deploy to Amplify
+        run: npm run amplify:deploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
 ## トラブルシューティング
 
-### 問題: ビルドが失敗する（aws-exports.js not found）
+### ビルドエラー
 
-**原因**: AWS Amplify Backend未接続時に`aws-exports.js`ファイルが存在しない
-
-**解決策**: 
-このプロジェクトには自動フォールバック機能が実装されています。`vite.config.ts`のカスタムプラグインが、`aws-exports.js`が存在しない場合に自動的にデフォルト設定を提供します。
-
-ビルドエラーが発生する場合：
 ```bash
-# 依存関係を再インストール
-rm -rf node_modules package-lock.json
+# キャッシュをクリア
+rm -rf node_modules dist
 npm install
 npm run build
 ```
 
-**技術詳細**:
-- `vite.config.ts`の`awsExportsFallback()`プラグインが、ファイルの存在をチェック
-- 存在しない場合、仮想モジュールとして空の設定を提供
-- これにより、Amplify Backend未接続でもビルドが成功
+### Amplify Backendに接続できない
 
-### 問題: ビルドが失敗する（依存関係のエラー）
+1. `amplify_outputs.json`が存在するか確認
+2. AWS認証情報が正しいか確認
+3. IAM権限を確認
 
-**原因**: 依存関係のエラー
+### 環境変数が反映されない
 
-**解決策**:
-```bash
-rm -rf node_modules package-lock.json
-npm install
-npm run build
-```
+1. ビルド前に環境変数を設定
+2. キャッシュをクリアして再ビルド
 
-### 問題: デプロイ後に404エラー
+## モニタリング
 
-**原因**: SPAのルーティング設定
+### AWS CloudWatch
 
-**解決策**: 
-- S3: エラードキュメントを `index.html` に設定
-- CloudFront: カスタムエラーレスポンスを設定（404 → 200, /index.html）
+- Lambda関数のログ
+- AppSync APIのメトリクス
+- エラー率の監視
 
-### 問題: 環境変数が反映されない
+### Amplify Console
 
-**原因**: ビルド時に環境変数が設定されていない
+- ビルドログ
+- デプロイ履歴
+- アクセスログ
 
-**解決策**:
-```bash
-# .env.production を確認
-cat .env.production
+## バックアップ
 
-# 環境変数を明示的に設定してビルド
-VITE_USE_MOCK_API=false npm run build
-```
-
-### 問題: AppSync Endpointが分からない
-
-**原因**: GraphQL Endpointの確認方法が不明
-
-**解決策**:
-
-#### 方法1: Amplify CLIで確認
-```bash
-amplify status
-```
-
-#### 方法2: AWS AppSync Consoleで確認
-1. https://console.aws.amazon.com/appsync/ にアクセス
-2. APIを選択
-3. 「Settings」タブで「API URL」を確認
-
-#### 方法3: aws-exports.jsから確認
-```bash
-cat src/aws-exports.js | grep graphqlEndpoint
-```
-
-#### 方法4: AWS CLIで確認
-```bash
-aws appsync list-graphql-apis --region ap-northeast-1
-```
-
-出力例：
-```json
-{
-  "graphqlApis": [
-    {
-      "name": "fintechnewsapp",
-      "apiId": "xxxxxxxxxxxxxxxxxxxxx",
-      "uris": {
-        "GRAPHQL": "https://xxxxxxxxxxxxxxxxxxxxx.appsync-api.ap-northeast-1.amazonaws.com/graphql"
-      }
-    }
-  ]
-}
-```
-
-### 問題: APIリクエストが失敗する
-
-**原因**: CORS設定
-
-**解決策**:
-- AppSyncでCORS設定を確認
-- APIクライアントのベースURLを確認
-
-## セキュリティチェックリスト
-
-- [ ] HTTPS強制
-- [ ] セキュリティヘッダー設定
-  - Content-Security-Policy
-  - X-Frame-Options
-  - X-Content-Type-Options
-- [ ] API認証設定
-- [ ] 環境変数の暗号化
-- [ ] IAM権限の最小化
-
-## パフォーマンス最適化
-
-### 1. キャッシュ戦略
-
-```
-# 静的アセット（1年）
-/assets/* - max-age=31536000, immutable
-
-# HTML（キャッシュなし）
-/index.html - max-age=0, must-revalidate
-
-# API（5分）
-/api/* - max-age=300
-```
-
-### 2. 画像最適化
-
-- WebP形式の使用
-- 遅延読み込み
-- レスポンシブ画像
-
-### 3. コード分割
-
-- ルートベースの分割（実装済み）
-- コンポーネントの動的インポート
-
-## 監視とアラート
-
-### CloudWatch Alarms
+### DynamoDBのバックアップ
 
 ```bash
-# エラー率アラーム
-aws cloudwatch put-metric-alarm \
-  --alarm-name fintech-news-high-error-rate \
-  --alarm-description "Error rate > 5%" \
-  --metric-name Errors \
-  --namespace AWS/Lambda \
-  --statistic Average \
-  --period 300 \
-  --threshold 5 \
-  --comparison-operator GreaterThanThreshold
+# オンデマンドバックアップ
+aws dynamodb create-backup \
+  --table-name <table-name> \
+  --backup-name fintech-news-backup-$(date +%Y%m%d)
+
+# ポイントインタイムリカバリを有効化
+aws dynamodb update-continuous-backups \
+  --table-name <table-name> \
+  --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true
 ```
 
-### ログ分析
+## ロールバック
+
+### Amplify Hosting
+
+1. Amplify Console → デプロイ履歴
+2. 以前のデプロイを選択
+3. 「再デプロイ」をクリック
+
+### 手動デプロイ
 
 ```bash
-# Lambda関数のログを確認
-aws logs tail /aws/lambda/fetchNews --follow
+# 以前のコミットに戻す
+git revert <commit-hash>
+git push
 
-# AppSyncのログを確認
-aws logs tail /aws/appsync/apis/YOUR_API_ID --follow
+# または
+git reset --hard <commit-hash>
+git push --force
+```
+
+## セキュリティ
+
+### HTTPS強制
+
+AWS Amplify Hostingでは自動的にHTTPSが有効化されます。
+
+### セキュリティヘッダー
+
+`amplify.yml`にカスタムヘッダーを追加：
+
+```yaml
+customHeaders:
+  - pattern: '**/*'
+    headers:
+      - key: 'Strict-Transport-Security'
+        value: 'max-age=31536000; includeSubDomains'
+      - key: 'X-Frame-Options'
+        value: 'DENY'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'X-XSS-Protection'
+        value: '1; mode=block'
 ```
 
 ## コスト最適化
 
-### 推定月額コスト（1000ユーザー想定）
+### AWS Amplify
 
-- Amplify Hosting: $15
-- AppSync: $4
-- DynamoDB: $5
-- Lambda: $1
-- CloudWatch: $3
-- **合計: 約$28/月**
+- 無料枠: 月1000ビルド分、15GB転送
+- 超過分: ビルド時間とデータ転送量に応じて課金
 
-### コスト削減のヒント
+### DynamoDB
 
-1. DynamoDBのオンデマンドモードを使用
-2. Lambda関数のメモリを最適化
-3. CloudFrontのキャッシュを活用
-4. 不要なログを削除
+- オンデマンドモード推奨（トラフィックが予測不可能な場合）
+- プロビジョニングモード（安定したトラフィックの場合）
 
-## 次のステップ
+### Lambda
 
-1. ✅ 本番環境へのデプロイ
-2. ⏭️ カスタムドメインの設定
-3. ⏭️ 監視とアラートの設定
-4. ⏭️ バックアップ戦略の実装
-5. ⏭️ ディザスタリカバリ計画
+- 無料枠: 月100万リクエスト
+- メモリとタイムアウトを最適化
 
-## サポート
+## 参考リンク
 
-問題が発生した場合：
-1. [AWS Support](https://console.aws.amazon.com/support/)
-2. [Amplify Discord](https://discord.gg/amplify)
-3. [GitHub Issues](https://github.com/your-repo/issues)
+- [AWS Amplify Hosting Documentation](https://docs.aws.amazon.com/amplify/latest/userguide/welcome.html)
+- [Amplify Gen 2 Documentation](https://docs.amplify.aws/react/)
+- [DynamoDB Best Practices](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/best-practices.html)

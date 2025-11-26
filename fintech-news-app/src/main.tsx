@@ -2,22 +2,17 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-// @ts-expect-error - AWS Amplify auto-generated file
-import awsconfig from './aws-exports.js';
 
 // Amplify設定（Backend環境が接続されている場合のみ）
 async function configureAmplify() {
   try {
-    // Endpointが設定されている場合のみAmplifyを設定
-    if (awsconfig?.aws_appsync_graphqlEndpoint) {
-      const { Amplify } = await import('aws-amplify');
-      Amplify.configure(awsconfig);
-      console.log('✅ Amplify Backend connected');
-    } else {
-      console.log('ℹ️ Amplify Backend not configured, using mock API');
-    }
+    const { Amplify } = await import('aws-amplify');
+    const outputs = await import('../amplify_outputs.json');
+    
+    Amplify.configure(outputs.default);
+    console.log('✅ Amplify Backend connected');
   } catch (error) {
-    console.log('ℹ️ Amplify Backend not connected, using mock API', error);
+    console.log('ℹ️ Amplify Backend not configured, using mock API', error);
   }
 }
 
@@ -33,9 +28,14 @@ async function enableMocking() {
   }
 
   // 本番環境（production）では、Amplify Backendが設定されている場合はモックを無効化
-  if (import.meta.env.PROD && awsconfig?.aws_appsync_graphqlEndpoint) {
-    console.log('ℹ️ Production mode with Amplify Backend, skipping mock API');
-    return;
+  if (import.meta.env.PROD) {
+    try {
+      await import('../amplify_outputs.json');
+      console.log('ℹ️ Production mode with Amplify Backend, skipping mock API');
+      return;
+    } catch {
+      // amplify_outputs.jsonが存在しない場合はモックAPIを使用
+    }
   }
 
   // それ以外（開発環境または未設定）の場合はモックAPIを有効化

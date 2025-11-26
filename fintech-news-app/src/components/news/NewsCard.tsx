@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { BookmarkButton } from '../features/BookmarkButton';
+import { LazyImage } from '../ui/LazyImage';
 import type { Article } from '../../mocks/articles';
 
 interface NewsCardProps {
@@ -32,11 +33,11 @@ export function NewsCard({ article, onClick, index = 0 }: NewsCardProps) {
     >
       {article.imageUrl && (
         <div className="relative">
-          <img
+          <LazyImage
             src={article.imageUrl}
             alt={article.title}
             className="w-full h-48 object-cover"
-            loading="lazy"
+            placeholder="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23f3f4f6' width='400' height='300'/%3E%3C/svg%3E"
           />
           <div className="absolute top-2 right-2">
             <BookmarkButton articleId={article.id} size="sm" />

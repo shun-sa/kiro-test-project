@@ -4,31 +4,32 @@ import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
 
-// aws-exports.jsが存在しない場合にフォールバックを提供するプラグイン
-function awsExportsFallback(): Plugin {
-  const awsExportsPath = path.resolve(__dirname, './src/aws-exports.js')
-  const virtualModuleId = 'virtual:aws-exports'
+// amplify_outputs.jsonが存在しない場合にフォールバックを提供するプラグイン
+function amplifyOutputsFallback(): Plugin {
+  const amplifyOutputsPath = path.resolve(__dirname, './amplify_outputs.json')
+  const virtualModuleId = 'virtual:amplify-outputs'
   const resolvedVirtualModuleId = '\0' + virtualModuleId
 
-  const defaultAwsConfig = `
-    const awsmobile = {
-      aws_project_region: 'ap-northeast-1',
-      aws_appsync_graphqlEndpoint: '',
-      aws_appsync_region: 'ap-northeast-1',
-      aws_appsync_authenticationType: 'API_KEY',
-      aws_appsync_apiKey: '',
+  const defaultAmplifyConfig = `
+    export default {
+      version: "1",
+      data: {
+        url: "",
+        aws_region: "ap-northeast-1",
+        default_authorization_type: "API_KEY",
+        api_key: ""
+      }
     };
-    export default awsmobile;
   `
 
   return {
-    name: 'aws-exports-fallback',
+    name: 'amplify-outputs-fallback',
     resolveId(id) {
-      // aws-exports.jsへのインポートを処理
-      if (id.includes('aws-exports')) {
+      // amplify_outputs.jsonへのインポートを処理
+      if (id.includes('amplify_outputs.json')) {
         // ファイルが存在する場合は実際のファイルを使用
-        if (fs.existsSync(awsExportsPath)) {
-          return awsExportsPath
+        if (fs.existsSync(amplifyOutputsPath)) {
+          return amplifyOutputsPath
         }
         // 存在しない場合は仮想モジュールを使用
         return resolvedVirtualModuleId
@@ -37,11 +38,11 @@ function awsExportsFallback(): Plugin {
     load(id) {
       if (id === resolvedVirtualModuleId) {
         // デフォルトの空の設定を返す
-        return defaultAwsConfig
+        return defaultAmplifyConfig
       }
       // 実際のファイルが存在しない場合もフォールバック
-      if (id === awsExportsPath && !fs.existsSync(awsExportsPath)) {
-        return defaultAwsConfig
+      if (id === amplifyOutputsPath && !fs.existsSync(amplifyOutputsPath)) {
+        return defaultAmplifyConfig
       }
     },
   }
@@ -49,7 +50,7 @@ function awsExportsFallback(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), awsExportsFallback()],
+  plugins: [react(), amplifyOutputsFallback()],
   build: {
     rollupOptions: {
       external: [],

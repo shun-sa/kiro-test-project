@@ -1,10 +1,6 @@
 import type { Article, Category, TechLevel } from '../../types';
-import { generateClient } from 'aws-amplify/api';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - GraphQL auto-generated queries
-import { listArticles, getArticle as getArticleQuery, listCategories } from '../../graphql/queries';
-// @ts-expect-error - AWS Amplify auto-generated file
-import awsconfig from '../../aws-exports.js';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../../amplify/data/resource';
 
 /**
  * APIクライアント
@@ -14,12 +10,8 @@ import awsconfig from '../../aws-exports.js';
 // モックAPIを使用するかどうかを判定
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-// GraphQL クライアントの初期化（本番環境用）
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let graphqlClient: any = null;
-if (!USE_MOCK_API && awsconfig?.aws_appsync_graphqlEndpoint) {
-  graphqlClient = generateClient();
-}
+// Amplify Data クライアントの初期化（本番環境用）
+const client = generateClient<Schema>();
 
 export class ApiError extends Error {
   status: number;
@@ -50,28 +42,28 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 /**
- * GraphQL型からアプリケーション型に変換
+ * Amplify Data型からアプリケーション型に変換
  */
-function transformArticle(item: Record<string, unknown>): Article {
+function transformArticle(item: Schema['Article']['type']): Article {
   return {
-    id: item.id as string,
-    title: item.title as string,
-    summary: item.summary as string,
-    content: item.content as string,
-    url: item.url as string,
-    imageUrl: item.imageUrl as string | undefined,
-    publishedAt: item.publishedAt as string,
-    source: item.source as string,
-    category: item.category as string,
+    id: item.id,
+    title: item.title,
+    summary: item.summary,
+    content: item.content,
+    url: item.url,
+    imageUrl: item.imageUrl || undefined,
+    publishedAt: item.publishedAt,
+    source: item.source,
+    category: item.category,
     techLevel: item.techLevel as TechLevel | undefined,
-    readingTime: item.readingTime as number,
-    createdAt: item.createdAt as string,
-    updatedAt: item.updatedAt as string,
+    readingTime: item.readingTime,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
   };
 }
 
-function transformCategory(item: Record<string, unknown>): Category {
-  // GraphQLスキーマにはcolorフィールドがないため、デフォルト値を設定
+function transformCategory(item: Schema['Category']['type']): Category {
+  // カテゴリのカラーマッピング
   const colorMap: Record<string, string> = {
     'ai-ml': '#3B82F6',
     'blockchain': '#8B5CF6',
@@ -81,14 +73,13 @@ function transformCategory(item: Record<string, unknown>): Category {
     'startup': '#EC4899',
   };
 
-  const slug = item.slug as string;
   return {
-    id: item.id as string,
-    name: item.name as string,
-    slug,
-    color: colorMap[slug] || '#6B7280',
-    icon: item.icon as string,
-    description: (item.description as string) || '',
+    id: item.id,
+    name: item.name,
+    slug: item.slug,
+    color: item.color || colorMap[item.slug] || '#6B7280',
+    icon: item.icon,
+    description: item.description,
   };
 }
 
@@ -110,7 +101,7 @@ export const apiClient = {
     };
   }> {
     // モックAPIを使用する場合
-    if (USE_MOCK_API || !graphqlClient) {
+    if (USE_MOCK_API) {
       const searchParams = new URLSearchParams();
       if (params?.category) searchParams.set('category', params.category);
       if (params?.page) searchParams.set('page', params.page.toString());
@@ -121,23 +112,16 @@ export const apiClient = {
       return handleResponse(response);
     }
 
-    // GraphQL APIを使用する場合
+    // Amplify Data APIを使用する場合
     try {
-      const filter: Record<string, unknown> = {};
-      if (params?.category) {
-        filter.category = { eq: params.category };
-      }
+      const filter = params?.category
+        ? { category: { eq: params.category } }
+        : undefined;
 
-      const result = await graphqlClient.graphql({
-        query: listArticles,
-        variables: {
-          filter,
-          limit: params?.limit || 20,
-        },
+      const { data: items, nextToken } = await client.models.Article.list({
+        filter,
+        limit: params?.limit || 20,
       });
-
-      const items = result.data?.listArticles?.items || [];
-      const nextToken = result.data?.listArticles?.nextToken;
 
       return {
         articles: items.map(transformArticle),
@@ -149,7 +133,7 @@ export const apiClient = {
         },
       };
     } catch (error) {
-      console.error('GraphQL Error:', error);
+      console.error('Amplify Data Error:', error);
       throw new ApiError('Failed to fetch articles', 500, error);
     }
   },
@@ -159,26 +143,23 @@ export const apiClient = {
    */
   async getArticle(id: string): Promise<Article> {
     // モックAPIを使用する場合
-    if (USE_MOCK_API || !graphqlClient) {
+    if (USE_MOCK_API) {
       const url = `/api/articles/${id}`;
       const response = await fetch(url);
       return handleResponse(response);
     }
 
-    // GraphQL APIを使用する場合
+    // Amplify Data APIを使用する場合
     try {
-      const result = await graphqlClient.graphql({
-        query: getArticleQuery,
-        variables: { id },
-      });
+      const { data: item } = await client.models.Article.get({ id });
 
-      if (!result.data?.getArticle) {
+      if (!item) {
         throw new ApiError('Article not found', 404);
       }
 
-      return transformArticle(result.data.getArticle);
+      return transformArticle(item);
     } catch (error) {
-      console.error('GraphQL Error:', error);
+      console.error('Amplify Data Error:', error);
       throw new ApiError('Failed to fetch article', 500, error);
     }
   },
@@ -188,22 +169,18 @@ export const apiClient = {
    */
   async getCategories(): Promise<Category[]> {
     // モックAPIを使用する場合
-    if (USE_MOCK_API || !graphqlClient) {
+    if (USE_MOCK_API) {
       const url = '/api/categories';
       const response = await fetch(url);
       return handleResponse(response);
     }
 
-    // GraphQL APIを使用する場合
+    // Amplify Data APIを使用する場合
     try {
-      const result = await graphqlClient.graphql({
-        query: listCategories,
-      });
-
-      const items = result.data?.listCategories?.items || [];
+      const { data: items } = await client.models.Category.list();
       return items.map(transformCategory);
     } catch (error) {
-      console.error('GraphQL Error:', error);
+      console.error('Amplify Data Error:', error);
       throw new ApiError('Failed to fetch categories', 500, error);
     }
   },
@@ -213,7 +190,7 @@ export const apiClient = {
    */
   async searchArticles(query: string, limit = 20): Promise<Article[]> {
     // モックAPIを使用する場合
-    if (USE_MOCK_API || !graphqlClient) {
+    if (USE_MOCK_API) {
       const searchParams = new URLSearchParams({
         q: query,
         limit: limit.toString(),
@@ -223,25 +200,21 @@ export const apiClient = {
       return handleResponse(response);
     }
 
-    // GraphQL APIを使用する場合（タイトルまたはサマリーで検索）
+    // Amplify Data APIを使用する場合（タイトルまたはサマリーで検索）
     try {
-      const result = await graphqlClient.graphql({
-        query: listArticles,
-        variables: {
-          filter: {
-            or: [
-              { title: { contains: query } },
-              { summary: { contains: query } },
-            ],
-          },
-          limit,
+      const { data: items } = await client.models.Article.list({
+        filter: {
+          or: [
+            { title: { contains: query } },
+            { summary: { contains: query } },
+          ],
         },
+        limit,
       });
 
-      const items = result.data?.listArticles?.items || [];
       return items.map(transformArticle);
     } catch (error) {
-      console.error('GraphQL Error:', error);
+      console.error('Amplify Data Error:', error);
       throw new ApiError('Failed to search articles', 500, error);
     }
   },
