@@ -3,12 +3,10 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd fintech-news-app
-        - npm install
+        - cd fintech-news-app && npm install
     build:
       commands:
-        - cd fintech-news-app
-        - npm run build
+        - cd fintech-news-app && npm run build
   artifacts:
     baseDirectory: fintech-news-app/dist
     files:
