@@ -152,6 +152,41 @@ npm run build
 
 ## デプロイエラー
 
+### @parcel/watcher ビルドエラー
+
+#### エラーメッセージ
+
+```
+Error: No prebuild or local build of @parcel/watcher found. Tried @parcel/watcher-linux-x64-glibc.
+```
+
+#### 原因
+
+AWS Amplify HostingのビルドイメージでAmplify Gen 2の`@parcel/watcher`ネイティブモジュールがビルドできない。
+
+#### 解決方法
+
+**推奨: バックエンドを手動デプロイ**
+
+1. ローカル環境でバックエンドをデプロイ：
+
+```bash
+cd fintech-news-app
+npm run amplify:deploy
+```
+
+2. 生成された`amplify_outputs.json`をコミット：
+
+```bash
+git add amplify_outputs.json
+git commit -m "Add Amplify backend outputs"
+git push
+```
+
+3. `amplify.yml`からbackendセクションを削除（フロントエンドのみビルド）
+
+詳細は`BACKEND_DEPLOY.md`を参照してください。
+
 ### AWS Amplify Hostingでのビルド失敗
 
 #### 原因1: 環境変数が設定されていない
