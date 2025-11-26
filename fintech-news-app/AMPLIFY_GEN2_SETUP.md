@@ -1,182 +1,89 @@
-# AWS Amplify Gen 2 セットアップガイド
+# Amplify Gen 2 セットアップガイド（ローカル開発用）
 
-このドキュメントでは、FinTech News AppのAWS Amplify Gen 2バックエンドのセットアップ手順を説明します。
+このガイドは、ローカル開発環境でAmplify Gen 2バックエンドを使用する場合の手順です。
 
-## 前提条件
+## 注意事項
 
-- Node.js 18以上
-- AWS アカウント
-- AWS CLI がインストールされ、設定されていること
+**Amplify Hostingでのデプロイには問題があります。**
 
-## 1. AWS認証情報の設定
+推奨される方法:
+1. **フロントエンドのみ**: Amplify Hostingでデプロイ（モックAPI使用）
+2. **バックエンド**: ローカルから手動デプロイ
 
-AWS CLIで認証情報を設定します：
+詳細は`DEPLOYMENT_GUIDE.md`を参照してください。
+
+## ローカル開発環境のセットアップ
+
+### 1. 依存関係のインストール
+
+```bash
+cd fintech-news-app
+npm install
+```
+
+### 2. AWS認証情報の設定
 
 ```bash
 aws configure
 ```
 
-以下の情報を入力：
+以下を入力:
 - AWS Access Key ID
-- AWS Secret Access Key
-- Default region name: `ap-northeast-1` (東京リージョン)
+- AWS Secret Access Key  
+- Default region: `ap-northeast-1`
 - Default output format: `json`
 
-## 2. Amplify Sandboxの起動（開発環境）
-
-開発環境では、Amplify Sandboxを使用してローカルでバックエンドをテストできます：
+### 3. Amplify Sandboxの起動
 
 ```bash
-cd fintech-news-app
 npm run amplify:sandbox
 ```
 
-このコマンドは以下を実行します：
-- AWS CloudFormationスタックを作成
-- AppSync GraphQL APIをデプロイ
-- DynamoDBテーブルを作成
-- `amplify_outputs.json`を生成（フロントエンドの設定ファイル）
+初回起動には5-10分かかります。
 
-Sandboxが起動したら、別のターミナルで開発サーバーを起動：
+### 4. 開発サーバーの起動
+
+別のターミナルで:
 
 ```bash
 npm run dev
 ```
 
-## 3. 本番環境へのデプロイ
+ブラウザで`http://localhost:5173`を開きます。
 
-本番環境にデプロイする場合：
+## バックエンドの手動デプロイ
+
+本番環境用にバックエンドをデプロイする場合:
 
 ```bash
 npm run amplify:deploy
 ```
 
-## 4. 環境変数の設定
+完了すると`amplify_outputs.json`が生成されます。
 
-### 開発環境（モックAPI使用）
-
-`.env.local`ファイルを作成：
-
-```env
-VITE_USE_MOCK_API=true
-```
-
-### 本番環境（Amplify Backend使用）
-
-`.env.production`ファイルを作成：
-
-```env
-VITE_USE_MOCK_API=false
-```
-
-## 5. データモデル
-
-### Article（記事）
-
-```typescript
-{
-  id: string;
-  title: string;
-  summary: string;
-  content: string;
-  url: string;
-  imageUrl?: string;
-  publishedAt: datetime;
-  source: string;
-  category: string;
-  techLevel?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-  readingTime: number;
-}
-```
-
-### Category（カテゴリ）
-
-```typescript
-{
-  id: string;
-  name: string;
-  slug: string;
-  color: string;
-  icon: string;
-  description: string;
-}
-```
-
-## 6. 初期データの投入
-
-Amplify Sandboxまたは本番環境が起動したら、初期データを投入します：
-
-```bash
-node scripts/seed-data.js
-```
-
-このスクリプトは以下を実行します：
-- カテゴリデータの作成
-- サンプル記事データの作成
-
-## 7. GraphQL APIの使用
-
-Amplify Gen 2では、型安全なクライアントが自動生成されます：
-
-```typescript
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../amplify/data/resource';
-
-const client = generateClient<Schema>();
-
-// 記事一覧を取得
-const { data: articles } = await client.models.Article.list();
-
-// 記事を作成
-const { data: newArticle } = await client.models.Article.create({
-  title: 'Sample Article',
-  summary: 'This is a summary',
-  content: 'Full content here',
-  url: 'https://example.com',
-  publishedAt: new Date().toISOString(),
-  source: 'Example Source',
-  category: 'fintech',
-  readingTime: 5,
-});
-```
-
-## 8. トラブルシューティング
+## トラブルシューティング
 
 ### Sandboxが起動しない
 
-1. AWS認証情報が正しく設定されているか確認
-2. `~/.aws/credentials`ファイルを確認
-3. IAM権限が適切か確認（AdministratorAccess推奨）
-
-### amplify_outputs.jsonが生成されない
-
-1. Sandboxが完全に起動するまで待つ（初回は5-10分かかる場合があります）
-2. ターミナルのログを確認してエラーがないか確認
-
-### フロントエンドがバックエンドに接続できない
-
-1. `amplify_outputs.json`が存在するか確認
-2. `.env.local`で`VITE_USE_MOCK_API=false`に設定
-3. ブラウザのコンソールでエラーを確認
-
-## 9. リソースのクリーンアップ
-
-開発が終了したら、Sandboxリソースを削除：
-
 ```bash
-# Sandboxを停止（Ctrl+C）
-# その後、CloudFormationスタックを削除
-aws cloudformation delete-stack --stack-name amplify-fintechnewsapp-sandbox-<username>
+# CloudFormationスタックを確認
+aws cloudformation describe-stacks --region ap-northeast-1
+
+# スタックを削除して再起動
+npx ampx delete
+npm run amplify:sandbox
 ```
 
-本番環境のリソースを削除：
+### @parcel/watcherエラー
+
+ローカル開発では通常発生しません。発生した場合:
 
 ```bash
-aws cloudformation delete-stack --stack-name amplify-fintechnewsapp-<branch>
+rm -rf node_modules package-lock.json
+npm install
 ```
 
 ## 参考リンク
 
-- [AWS Amplify Gen 2 Documentation](https://docs.amplify.aws/react/)
-- [Amplify Data (GraphQL API)](https://docs.amplify.aws/react/build-a-backend/data/)
-- [Amplify CLI Reference](https://docs.amplify.aws/cli/)
+- [Amplify Gen 2 Documentation](https://docs.amplify.aws/react/build-a-backend/)
+- [Amplify Sandbox](https://docs.amplify.aws/react/deploy-and-host/sandbox-environments/)

@@ -2,6 +2,26 @@
 
 30代金融系ITエンジニア向けのレスポンシブWebアプリケーション。金融・IT分野のニュースを効率的に収集・表示します。
 
+## 🚀 クイックスタート
+
+### ローカル開発（モックAPI）
+
+```bash
+cd fintech-news-app
+npm install
+npm run dev
+```
+
+ブラウザで http://localhost:5173 を開きます。
+
+### 本番デプロイ（AWS Amplify Gen 2）
+
+**AWS Amplify ConsoleのGUIからGitHubリポジトリを連携してデプロイします。**
+
+バックエンド（DynamoDB、GraphQL API、Lambda）とフロントエンドが自動的にデプロイされます。
+
+詳細な手順は **[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)** を参照してください。
+
 ## 技術スタック
 
 ### フロントエンド
@@ -12,42 +32,34 @@
 - **Framer Motion** - アニメーション
 - **Zustand** - 状態管理
 - **React Router** - ルーティング
-- **MSW (Mock Service Worker)** - モックAPI
+- **SWR** - データフェッチング
+- **MSW** - モックAPI
 
-### バックエンド
+### バックエンド（オプション）
 - **AWS Amplify Gen 2** - バックエンドフレームワーク
 - **AWS AppSync** - GraphQL API
 - **Amazon DynamoDB** - NoSQLデータベース
 - **AWS Lambda** - サーバーレス関数
 
-## セットアップ
+## 📚 ドキュメント
+
+- **[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)** - デプロイ手順（推奨）
+- **[AMPLIFY_GEN2_SETUP.md](./AMPLIFY_GEN2_SETUP.md)** - ローカル開発用
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - トラブルシューティング
+
+## セットアップ詳細
 
 ### 前提条件
 
-- Node.js 18以上
-- npm または yarn
-- AWS アカウント（本番環境用）
+- Node.js 20以上
+- npm
+- AWS アカウント（デプロイ時のみ）
 
 ### インストール
 
 ```bash
 cd fintech-news-app
 npm install
-```
-
-### 開発環境（モックAPI使用）
-
-モックAPIを使用してローカルで開発：
-
-```bash
-npm run dev
-```
-
-ブラウザで http://localhost:5173 を開きます。
-
-### 本番環境（AWS Amplify使用）
-
-#### 1. AWS認証情報の設定
 
 ```bash
 aws configure
