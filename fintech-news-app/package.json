@@ -59,6 +59,7 @@
     ]
   },
   "overrides": {
-    "graphql": "^16.8.1"
+    "graphql": "^16.8.1",
+    "@parcel/watcher": "npm:chokidar@^3.5.3"
   }
 }
