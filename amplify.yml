@@ -1,23 +1,17 @@
 version: 1
 backend:
   phases:
-    preBuild:
-      commands:
-        - yum install -y python3 make gcc-c++
     build:
       commands:
         - cd fintech-news-app
-        - npm install --include=optional
-        - npm rebuild @parcel/watcher
-        - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        - npm install --include=optional --legacy-peer-deps
+        - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --outputs-out-dir ../amplify_outputs.json || npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
     preBuild:
       commands:
-        - yum install -y python3 make gcc-c++
         - cd fintech-news-app
-        - npm install --include=optional
-        - npm rebuild @parcel/watcher
+        - npm install --legacy-peer-deps
     build:
       commands:
         - npm run build
